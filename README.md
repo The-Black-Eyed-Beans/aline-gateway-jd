@@ -1,4 +1,4 @@
-## Aline API Gateway
+# Aline API Gateway
 
 This server is a gateway that routes specific requests specified in the
 configurations to a microservice.
