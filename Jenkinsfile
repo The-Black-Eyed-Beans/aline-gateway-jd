@@ -43,7 +43,7 @@ pipeline {
     }
     stage('archive') {
       steps {
-        archiveArtifacts artifacts: '**/target/*.jar', followSymlinks: false
+        archiveArtifacts artifacts: './target/*.jar', followSymlinks: false
       }
     }
     stage("deploy") {
