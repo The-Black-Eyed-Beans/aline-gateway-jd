@@ -11,8 +11,8 @@ services:
       - target: ${APP_PORT}
         x-aws-protocol: https
     environment:
-      - APP_SERVICE_HOST=${PROXY_DNS}
-      - APP_PORT=
+      - APP_SERVICE_HOST=${APP_SERVICE_HOST}
+      - APP_PORT=${APP_PORT}
     networks:
       - public
 networks:
@@ -30,8 +30,11 @@ x-aws-cloudformation:
               - ${SUBNET}
     Gateway443TargetGroup:
       Properties:
-        Certificates:
-          - CertificateArn: ${SSL_CERT}
         HealthCheckPath: /health
         Matcher:
           HttpCode: 200-499
+    Gateway443Listener:
+      Properties:
+        Protocol: HTTPS
+        Certificates:
+          - CertificateArn: ${SSL_CERT}
