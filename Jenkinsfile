@@ -27,24 +27,24 @@ pipeline {
         }
       }
     }
-    stage("Build") {
-      steps {
-        script {
-          gv.buildApp()
-        }
-      }
-    }
     stage("Test") {
       steps {
         script {
           gv.testApp()
         }
       } 
-    }    
+    }   
+    stage("Build") {
+      steps {
+        script {
+          gv.buildApp()
+        }
+      }
+    } 
     stage("SonarQube") {
       steps {
         withSonarQubeEnv("us-west-1-sonar") {
-            sh "mvn sonar:sonar"
+            sh "mvn verify sonar:sonar -Dmaven.test.failure.ignore=true"
         }
       }
     }
@@ -52,12 +52,43 @@ pipeline {
       steps {
           waitForQualityGate abortPipeline: true
       }
+    
     }
-    stage("Upstream to ECR") {
+    stage("Upstream Artifact to ECR") {
       steps {
         script {
           gv.upstreamToECR()
         }
+      }
+    }
+    stage("Get Secrets"){
+      steps {
+        sh """aws secretsmanager  get-secret-value --secret-id prod/services --region us-east-2 --profile joshua | jq -r '.["SecretString"]' | jq '.' > secrets"""
+      }
+    }
+    stage("Construct Deployment Environment"){
+      steps {
+        script {
+          secretKeys = sh(script: 'cat secrets | jq "keys"', returnStdout: true).trim()
+          secretValues = sh(script: 'cat secrets | jq "values"', returnStdout: true).trim()
+          def parser = new JsonSlurper()
+          def keys = parser.parseText(secretKeys)
+          def values = parser.parseText(secretValues)
+          for (key in keys) {
+              def val="${key}=${values[key]}"
+              data += "${val}\n"
+          }
+        }
+        sh "rm -f .env && touch .env"
+        writeFile(file: '.env', text: data)
+        sh "echo 'APP_PORT=80' >> .env"
+        sh "echo 'APP_SERVICE_HOST=proxy-server.proxy.local' >> .env"
+      }
+    }
+    stage("Deploy to ECS"){
+      steps {
+        sh "docker context use prod-jd"
+        sh "docker compose -p $DOCKER_IMAGE --env-file .env up -d"
       }
     }
   }
