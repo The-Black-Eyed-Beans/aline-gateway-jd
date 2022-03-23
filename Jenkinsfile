@@ -75,7 +75,7 @@ pipeline {
         }
         sh "rm -f .env && touch .env"
         writeFile(file: '.env', text: data)
-        sh "echo 'APP_PORT=80' >> .env"
+        sh "echo 'APP_PORT=443' >> .env"
         sh "echo 'APP_SERVICE_HOST=proxy-server.proxy.local' >> .env"
       }
     }
