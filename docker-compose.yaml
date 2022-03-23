@@ -8,11 +8,11 @@ services:
   gateway:
     image: $AWS_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com/gateway-jd:latest
     ports:
-      - target: 443
-        x-aws-protocol: http
+      - target: ${APP_PORT}
+        x-aws-protocol: https
     environment:
       - APP_SERVICE_HOST=${PROXY_DNS}
-      - APP_PORT=${APP_PORT}
+      - APP_PORT=
     networks:
       - public
 networks:
