@@ -2,6 +2,7 @@ version: "3.9"
 
 x-aws-vpc: ${VPC}
 x-aws-cluster: ${CLUSTER}
+x-aws-loadbalancer: ${LOAD_BALANCER}
 
 services:
   gateway:

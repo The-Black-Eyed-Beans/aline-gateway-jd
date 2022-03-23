@@ -1,7 +1,14 @@
+import groovy.json.JsonSlurper
+
+def data = ""
 def gv
 
 pipeline {
-  agent any
+  agent {
+    node {
+      label "worker-one"
+    }
+  }
 
   tools {
     maven 'Maven'
@@ -15,7 +22,7 @@ pipeline {
 
   environment {
     AWS_ACCOUNT_ID = credentials("AWS-ACCOUNT-ID")
-    DOCKER_IMAGE = "gateway-microservice"
+    DOCKER_IMAGE = "gateway"
     ECR_REGION = "us-east-2"
   }
 
@@ -41,19 +48,6 @@ pipeline {
         }
       }
     } 
-    stage("SonarQube") {
-      steps {
-        withSonarQubeEnv("us-west-1-sonar") {
-            sh "mvn verify sonar:sonar -Dmaven.test.failure.ignore=true"
-        }
-      }
-    }
-    stage("Await Quality Gate") {
-      steps {
-          waitForQualityGate abortPipeline: true
-      }
-    
-    }
     stage("Upstream Artifact to ECR") {
       steps {
         script {
