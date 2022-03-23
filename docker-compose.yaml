@@ -30,6 +30,8 @@ x-aws-cloudformation:
               - ${SUBNET}
     Gateway443TargetGroup:
       Properties:
+        Certificates:
+          - CertificateArn: ${SSL_CERT}
         HealthCheckPath: /health
         Matcher:
           HttpCode: 200-499
