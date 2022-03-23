@@ -1,0 +1,34 @@
+version: "3.9"
+
+x-aws-vpc: ${VPC}
+x-aws-cluster: ${CLUSTER}
+
+services:
+  gateway:
+    image: $AWS_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com/gateway-jd:latest
+    ports:
+      - target: 80
+        x-aws-protocol: http
+    environment:
+      - APP_SERVICE_HOST=${PROXY_DNS}
+      - APP_PORT=${APP_PORT}
+    networks:
+      - public
+networks:
+  public:
+    external: true
+    name: ${PUBLIC_SECUTIRY_GROUP}
+
+x-aws-cloudformation:
+  Resources:
+    GatewayService:
+      Properties:
+        NetworkConfiguration:
+          AwsvpcConfiguration:
+            Subnets:
+              - ${SUBNET}
+    Gateway80TargetGroup:
+      Properties:
+        HealthCheckPath: /health
+        Matcher:
+          HttpCode: 200-499
