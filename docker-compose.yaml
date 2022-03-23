@@ -8,7 +8,7 @@ services:
   gateway:
     image: $AWS_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com/gateway-jd:latest
     ports:
-      - target: 80
+      - target: 443
         x-aws-protocol: http
     environment:
       - APP_SERVICE_HOST=${PROXY_DNS}
@@ -28,7 +28,7 @@ x-aws-cloudformation:
           AwsvpcConfiguration:
             Subnets:
               - ${SUBNET}
-    Gateway80TargetGroup:
+    Gateway443TargetGroup:
       Properties:
         HealthCheckPath: /health
         Matcher:
