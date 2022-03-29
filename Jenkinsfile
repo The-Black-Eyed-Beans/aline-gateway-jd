@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-
-def data = ""
 def gv
 
 pipeline {
@@ -22,14 +19,15 @@ pipeline {
 
   environment {
     AWS_ACCOUNT_ID = credentials("AWS-ACCOUNT-ID")
+    AWS_PROFILE = credentials("AWS_PROFILE")
     DOCKER_IMAGE = "gateway"
-    ECR_REGION = "us-east-2"
+    ECR_REGION = credentials("AWS_REGION")
   }
 
   stages {
     stage("init") {
       steps {
-          script {
+        script {
           gv = load "script.groovy"
         }
       }
@@ -55,34 +53,49 @@ pipeline {
         }
       }
     }
-    stage("Get Secrets"){
+    stage("Fetch Environment Variables"){
       steps {
-        sh """aws secretsmanager  get-secret-value --secret-id prod/services --region us-east-2 --profile joshua | jq -r '.["SecretString"]' | jq '.' > secrets"""
+        sh 'aws s3 cp s3://beb-bucket-jd/terraform/vpc-output.json vpc-output.json --quiet --profile $AWS_PROFILE'
+        sh 'aws s3 cp s3://beb-bucket-jd/terraform/ecs-output.json ecs-output.json --quiet --profile $AWS_PROFILE'
+        sh """cat ecs-output.json | jq '.["outputs"]' > ecs.json"""
+        sh """cat ecs.json| jq '.["security_groups"]["value"]' | jq 'map({(.name): .id}) | add' > sg.json"""
+        sh """cat ecs.json | jq '.["service_secrets"]["value"]' | jq 'map({(.name): .arn}) | add' > secrets.json"""
       }
     }
-    stage("Construct Deployment Environment"){
-      steps {
-        script {
-          secretKeys = sh(script: 'cat secrets | jq "keys"', returnStdout: true).trim()
-          secretValues = sh(script: 'cat secrets | jq "values"', returnStdout: true).trim()
-          def parser = new JsonSlurper()
-          def keys = parser.parseText(secretKeys)
-          def values = parser.parseText(secretValues)
-          for (key in keys) {
-              def val="${key}=${values[key]}"
-              data += "${val}\n"
-          }
-        }
-        sh "rm -f .env && touch .env"
-        writeFile(file: '.env', text: data)
-        sh "echo 'APP_PORT=443' >> .env"
-        sh "echo 'APP_SERVICE_HOST=proxy-server.proxy.local' >> .env"
-      }
-    }
+    // stage("Construct Deployment Environment"){
+    //   steps {
+    //     script {
+    //       secretKeys = sh(script: 'cat secrets | jq "keys"', returnStdout: true).trim()
+    //       secretValues = sh(script: 'cat secrets | jq "values"', returnStdout: true).trim()
+    //       def parser = new JsonSlurper()
+    //       def keys = parser.parseText(secretKeys)
+    //       def values = parser.parseText(secretValues)
+    //       for (key in keys) {
+    //           def val="${key}=${values[key]}"
+    //           data += "${val}\n"
+    //       }
+    //     }
+    //     sh "rm -f .env && touch .env"
+    //     writeFile(file: '.env', text: data)
+    //     sh "echo 'APP_PORT=443' >> .env"
+    //     sh "echo 'APP_SERVICE_HOST=proxy-server.proxy.local' >> .env"
+    //   }
+    // }
     stage("Deploy to ECS"){
+      environment {
+        APP_SERVICE_HOST = "proxy-server.proxy-server-jd.local"
+        CLUSTER = "${sh(script: """cat ecs.json | jq -r '.["cluster"]["value"]'""", returnStdout: true).trim()}"
+        LOAD_BALANCER = "${sh(script: """cat ecs.json | jq -r '.["load_balancer"]["value"]'""", returnStdout: true).trim()}"
+        SG_PRIVATE = "${sh(script: """cat sg.json | jq -r '.["private"]'""", returnStdout: true).trim()}"
+        SG_PUBLIC = "${sh(script: """cat sg.json | jq -r '.["public"]'""", returnStdout: true).trim()}"
+        SSL_CERT = "${sh(script: """cat ecs.json | jq -r '.["ssl_cert"]["value"]'""", returnStdout: true).trim()}"
+        SUBNET_ONE = "${sh(script: """cat vpc-output.json | jq -r '.["outputs"]["private_subnets"]["value"][0]'""", returnStdout: true).trim()}"
+        SUBNET_TWO = "${sh(script: """cat vpc-output.json | jq -r '.["outputs"]["private_subnets"]["value"][1]'""", returnStdout: true).trim()}"
+        VPC = "${sh(script: """cat vpc-output.json | jq -r '.["outputs"]["vpc_id"]["value"]'""", returnStdout: true).trim()}"
+      }
       steps {
         sh "docker context use prod-jd"
-        sh "docker compose -p $DOCKER_IMAGE --env-file .env up -d"
+        sh "docker compose -p $DOCKER_IMAGE-jd up -d"
       }
     }
   }
