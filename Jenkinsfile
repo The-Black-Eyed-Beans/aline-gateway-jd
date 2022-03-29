@@ -55,24 +55,19 @@ pipeline {
     }
     stage("Fetch Environment Variables"){
       steps {
-        sh 'aws s3 cp s3://beb-bucket-jd/terraform/vpc-output.json vpc-output.json --quiet --profile $AWS_PROFILE'
-        sh 'aws s3 cp s3://beb-bucket-jd/terraform/ecs-output.json ecs-output.json --quiet --profile $AWS_PROFILE'
-        sh """cat ecs-output.json | jq '.["outputs"]' > ecs.json"""
-        sh """cat ecs.json| jq '.["security_groups"]["value"]' | jq 'map({(.name): .id}) | add' > sg.json"""
-        sh """cat ecs.json | jq '.["service_secrets"]["value"]' | jq 'map({(.name): .arn}) | add' > secrets.json"""
+        sh "sh aws lambda invoke --function-name getGatewayEnv data.json --profile $AWS_PROFILE"
       }
     }
     stage("Deploy to ECS"){
       environment {
-        APP_SERVICE_HOST = credentials("APP_SERVICE_HOST")
-        CLUSTER = "${sh(script: """cat ecs.json | jq -r '.["cluster"]["value"]'""", returnStdout: true).trim()}"
-        LOAD_BALANCER = "${sh(script: """cat ecs.json | jq -r '.["load_balancer"]["value"]'""", returnStdout: true).trim()}"
-        SG_PRIVATE = "${sh(script: """cat sg.json | jq -r '.["private"]'""", returnStdout: true).trim()}"
-        SG_PUBLIC = "${sh(script: """cat sg.json | jq -r '.["public"]'""", returnStdout: true).trim()}"
-        SSL_CERT = "${sh(script: """cat ecs.json | jq -r '.["ssl_cert"]["value"]'""", returnStdout: true).trim()}"
-        SUBNET_ONE = "${sh(script: """cat vpc-output.json | jq -r '.["outputs"]["private_subnets"]["value"][0]'""", returnStdout: true).trim()}"
-        SUBNET_TWO = "${sh(script: """cat vpc-output.json | jq -r '.["outputs"]["private_subnets"]["value"][1]'""", returnStdout: true).trim()}"
-        VPC = "${sh(script: """cat vpc-output.json | jq -r '.["outputs"]["vpc_id"]["value"]'""", returnStdout: true).trim()}"
+        APP_SERVICE_HOST = "${sh(script: """cat data.json | jq -r '.["APP_SERVICE_HOST"]""", returnStdout: true).trim()}"
+        CLUSTER = "${sh(script: """cat data.json | jq -r '.["CLUSTER"]""", returnStdout: true).trim()}"
+        LOAD_BALANCER = "${sh(script: """cat data.json | jq -r '.["LOAD_BALANCER"]'""", returnStdout: true).trim()}"
+        SG_PUBLIC = "${sh(script: """cat data.json | jq -r '.["SG_PUBLIC"]'""", returnStdout: true).trim()}"
+        SSL_CERT = "${sh(script: """cat data.json | jq -r '.["SSL_CERT"]'""", returnStdout: true).trim()}"
+        SUBNET_ONE = "${sh(script: """cat data.json | jq -r '.["SUBNET_ONE"]'""", returnStdout: true).trim()}"
+        SUBNET_TWO = "${sh(script: """cat data.json | jq -r '.["SUBNET_TWO"]'""", returnStdout: true).trim()}"
+        VPC = "${sh(script: """cat data.json | jq -r '.["VPC"]'""", returnStdout: true).trim()}"
       }
       steps {
         sh "docker context use prod-jd"
