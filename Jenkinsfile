@@ -55,19 +55,19 @@ pipeline {
     }
     stage("Fetch Environment Variables"){
       steps {
-        sh "sh aws lambda invoke --function-name getGatewayEnv data.json --profile $AWS_PROFILE"
+        sh "aws lambda invoke --function-name getGatewayEnv data.json --profile $AWS_PROFILE"
       }
     }
     stage("Deploy to ECS"){
       environment {
-        APP_SERVICE_HOST = "${sh(script: """cat data.json | jq -r '.["APP_SERVICE_HOST"]""", returnStdout: true).trim()}"
-        CLUSTER = "${sh(script: """cat data.json | jq -r '.["CLUSTER"]""", returnStdout: true).trim()}"
-        LOAD_BALANCER = "${sh(script: """cat data.json | jq -r '.["LOAD_BALANCER"]'""", returnStdout: true).trim()}"
-        SG_PUBLIC = "${sh(script: """cat data.json | jq -r '.["SG_PUBLIC"]'""", returnStdout: true).trim()}"
-        SSL_CERT = "${sh(script: """cat data.json | jq -r '.["SSL_CERT"]'""", returnStdout: true).trim()}"
-        SUBNET_ONE = "${sh(script: """cat data.json | jq -r '.["SUBNET_ONE"]'""", returnStdout: true).trim()}"
-        SUBNET_TWO = "${sh(script: """cat data.json | jq -r '.["SUBNET_TWO"]'""", returnStdout: true).trim()}"
-        VPC = "${sh(script: """cat data.json | jq -r '.["VPC"]'""", returnStdout: true).trim()}"
+        APP_SERVICE_HOST = "${sh(script: """cat data.json | jq -r '.["body"]["APP_SERVICE_HOST"]'""", returnStdout: true).trim()}"
+        CLUSTER = "${sh(script: """cat data.json | jq -r '.["body"]["CLUSTER"]'""", returnStdout: true).trim()}"
+        LOAD_BALANCER = "${sh(script: """cat data.json | jq -r '.["body"]["LOAD_BALANCER"]'""", returnStdout: true).trim()}"
+        SG_PUBLIC = "${sh(script: """cat data.json | jq -r '.["body"]["SG_PUBLIC"]'""", returnStdout: true).trim()}"
+        SSL_CERT = "${sh(script: """cat data.json | jq -r '.["body"]["SSL_CERT"]'""", returnStdout: true).trim()}"
+        SUBNET_ONE = "${sh(script: """cat data.json | jq -r '.["body"]["SUBNET_ONE"]'""", returnStdout: true).trim()}"
+        SUBNET_TWO = "${sh(script: """cat data.json | jq -r '.["body"]["SUBNET_TWO"]'""", returnStdout: true).trim()}"
+        VPC = "${sh(script: """cat data.json | jq -r '.["body"]["VPC"]'""", returnStdout: true).trim()}"
       }
       steps {
         sh "docker context use prod-jd"
