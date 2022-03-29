@@ -9,7 +9,7 @@ services:
     image: $AWS_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com/gateway-jd:latest
     ports:
       - target: ${APP_PORT}
-        x-aws-protocol: https
+        x-aws-protocol: http
     environment:
       - APP_SERVICE_HOST=${APP_SERVICE_HOST}
       - APP_PORT=${APP_PORT}
@@ -18,7 +18,7 @@ services:
 networks:
   public:
     external: true
-    name: ${PUBLIC_SECUTIRY_GROUP}
+    name: ${SG_PUBLIC}
 
 x-aws-cloudformation:
   Resources:
@@ -27,13 +27,14 @@ x-aws-cloudformation:
         NetworkConfiguration:
           AwsvpcConfiguration:
             Subnets:
-              - ${SUBNET}
-    Gateway443TargetGroup:
+              - ${SUBNET_ONE}
+              - ${SUBNET_TWO}
+    Gateway80TargetGroup:
       Properties:
         HealthCheckPath: /health
         Matcher:
           HttpCode: 200-499
-    Gateway443Listener:
+    Gateway80Listener:
       Properties:
         Protocol: HTTPS
         Certificates:
