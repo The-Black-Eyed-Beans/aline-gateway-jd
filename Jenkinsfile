@@ -62,28 +62,9 @@ pipeline {
         sh """cat ecs.json | jq '.["service_secrets"]["value"]' | jq 'map({(.name): .arn}) | add' > secrets.json"""
       }
     }
-    // stage("Construct Deployment Environment"){
-    //   steps {
-    //     script {
-    //       secretKeys = sh(script: 'cat secrets | jq "keys"', returnStdout: true).trim()
-    //       secretValues = sh(script: 'cat secrets | jq "values"', returnStdout: true).trim()
-    //       def parser = new JsonSlurper()
-    //       def keys = parser.parseText(secretKeys)
-    //       def values = parser.parseText(secretValues)
-    //       for (key in keys) {
-    //           def val="${key}=${values[key]}"
-    //           data += "${val}\n"
-    //       }
-    //     }
-    //     sh "rm -f .env && touch .env"
-    //     writeFile(file: '.env', text: data)
-    //     sh "echo 'APP_PORT=443' >> .env"
-    //     sh "echo 'APP_SERVICE_HOST=proxy-server.proxy.local' >> .env"
-    //   }
-    // }
     stage("Deploy to ECS"){
       environment {
-        APP_SERVICE_HOST = "proxy-server.proxy-server-jd.local"
+        APP_SERVICE_HOST = credentials("APP_SERVICE_HOST")
         CLUSTER = "${sh(script: """cat ecs.json | jq -r '.["cluster"]["value"]'""", returnStdout: true).trim()}"
         LOAD_BALANCER = "${sh(script: """cat ecs.json | jq -r '.["load_balancer"]["value"]'""", returnStdout: true).trim()}"
         SG_PRIVATE = "${sh(script: """cat sg.json | jq -r '.["private"]'""", returnStdout: true).trim()}"
