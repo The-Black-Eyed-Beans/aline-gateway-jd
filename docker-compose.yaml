@@ -8,11 +8,11 @@ services:
   gateway:
     image: $AWS_ACCOUNT_ID.dkr.ecr.$ECR_REGION.amazonaws.com/gateway-jd:latest
     ports:
-      - target: ${APP_PORT}
+      - target: 443
         x-aws-protocol: http
     environment:
       - APP_SERVICE_HOST=${APP_SERVICE_HOST}
-      - APP_PORT=${APP_PORT}
+      - APP_PORT=443
     networks:
       - public
 networks:
@@ -29,12 +29,12 @@ x-aws-cloudformation:
             Subnets:
               - ${SUBNET_ONE}
               - ${SUBNET_TWO}
-    Gateway80TargetGroup:
+    Gateway443TargetGroup:
       Properties:
         HealthCheckPath: /health
         Matcher:
           HttpCode: 200-499
-    Gateway80Listener:
+    Gateway443Listener:
       Properties:
         Protocol: HTTPS
         Certificates:
