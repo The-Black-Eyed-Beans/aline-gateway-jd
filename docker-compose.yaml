@@ -15,10 +15,14 @@ services:
       - APP_PORT=443
     networks:
       - public
+      - private
 networks:
   public:
     external: true
     name: ${SG_PUBLIC}
+  private:
+    external: true
+    name: ${SG_PRIVATE}
 
 x-aws-cloudformation:
   Resources:
